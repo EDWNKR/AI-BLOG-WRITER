@@ -2,6 +2,14 @@
 
 An AI-powered tool that generates structured, SEO-optimized blog posts using OpenAI's GPT-4 API.
 
+## Video example : 
+
+![Demo GIF](./blog_demo.gif)
+
+
+## Try it at : https://ai-blog-writer-h4hapfrkvtbityw6agsmtn.streamlit.app/
+
+
 ## Features
 
 - Generate complete blog posts with proper structure (headers, bullet points, etc.)
