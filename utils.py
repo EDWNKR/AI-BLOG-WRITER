@@ -4,6 +4,7 @@ import time
 import json
 import requests
 import re
+import streamlit as st
 from typing import Dict, List, Any, Optional, Tuple
 from retry import retry
 from openai import OpenAI
@@ -11,11 +12,22 @@ from dotenv import load_dotenv
 from PIL import Image
 from io import BytesIO
 
-# Load environment variables
+# Load environment variables (for local development)
 load_dotenv()
 
+# Get OpenAI API key from Streamlit secrets or environment variable
+def get_openai_api_key():
+    # Try to get from Streamlit secrets first
+    if 'api_keys' in st.secrets and 'openai' in st.secrets['api_keys']:
+        api_key = st.secrets['api_keys']['openai']
+        if api_key != "YOUR_OPENAI_API_KEY":
+            return api_key
+    
+    # Fall back to environment variable
+    return os.getenv("OPENAI_API_KEY")
+
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=get_openai_api_key())
 
 class APIError(Exception):
     """Custom exception for API errors"""
@@ -130,6 +142,60 @@ def markdown_to_html(markdown_text: str) -> str:
     except Exception as e:
         raise APIError(f"Error converting markdown to HTML: {str(e)}")
 
+def get_notion_credentials():
+    """Get Notion credentials from secrets or environment variables"""
+    api_key = None
+    database_id = None
+    
+    # Try Streamlit secrets first
+    if 'notion' in st.secrets:
+        api_key = st.secrets['notion'].get('api_key')
+        database_id = st.secrets['notion'].get('database_id')
+        
+        # Don't use placeholder values
+        if api_key == "YOUR_NOTION_API_KEY":
+            api_key = None
+        if database_id == "YOUR_NOTION_DATABASE_ID":
+            database_id = None
+    
+    # Fall back to environment variables
+    if not api_key:
+        api_key = os.getenv("NOTION_API_KEY")
+    if not database_id:
+        database_id = os.getenv("NOTION_DATABASE_ID")
+        
+    return api_key, database_id
+
+def get_wordpress_credentials():
+    """Get WordPress credentials from secrets or environment variables"""
+    wp_url = None
+    wp_username = None
+    wp_password = None
+    
+    # Try Streamlit secrets first
+    if 'wordpress' in st.secrets:
+        wp_url = st.secrets['wordpress'].get('url')
+        wp_username = st.secrets['wordpress'].get('username')
+        wp_password = st.secrets['wordpress'].get('password')
+        
+        # Don't use placeholder values
+        if wp_url == "YOUR_WORDPRESS_URL":
+            wp_url = None
+        if wp_username == "YOUR_WORDPRESS_USERNAME":
+            wp_username = None
+        if wp_password == "YOUR_WORDPRESS_APPLICATION_PASSWORD":
+            wp_password = None
+    
+    # Fall back to environment variables
+    if not wp_url:
+        wp_url = os.getenv("WORDPRESS_URL")
+    if not wp_username:
+        wp_username = os.getenv("WORDPRESS_USERNAME")
+    if not wp_password:
+        wp_password = os.getenv("WORDPRESS_PASSWORD")
+        
+    return wp_url, wp_username, wp_password
+
 def save_to_notion(title: str, content: str, image=None) -> Optional[str]:
     """
     Save blog post to Notion
@@ -145,11 +211,10 @@ def save_to_notion(title: str, content: str, image=None) -> Optional[str]:
     from notion_client import Client
     
     try:
-        notion_api_key = os.getenv("NOTION_API_KEY")
-        notion_database_id = os.getenv("NOTION_DATABASE_ID")
+        notion_api_key, notion_database_id = get_notion_credentials()
         
         if not notion_api_key or not notion_database_id:
-            raise APIError("Notion API key or database ID not found in environment variables")
+            raise APIError("Notion API key or database ID not found in Streamlit secrets or environment variables")
         
         notion = Client(auth=notion_api_key)
         
@@ -214,12 +279,10 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
     from wordpress_xmlrpc.compat import xmlrpc_client
     
     try:
-        wp_url = os.getenv("WORDPRESS_URL")
-        wp_username = os.getenv("WORDPRESS_USERNAME")
-        wp_password = os.getenv("WORDPRESS_PASSWORD")
+        wp_url, wp_username, wp_password = get_wordpress_credentials()
         
         if not wp_url or not wp_username or not wp_password:
-            raise APIError("WordPress credentials not found in environment variables")
+            raise APIError("WordPress credentials not found in Streamlit secrets or environment variables")
         
         wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password)
         

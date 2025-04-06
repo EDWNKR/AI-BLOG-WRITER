@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.env.*
 
 # Python
 __pycache__/
@@ -26,6 +27,7 @@ var/
 # Virtual Environment
 venv/
 ENV/
+AI_BLOG_WRITER/
 
 # IDE files
 .idea/
@@ -34,7 +36,7 @@ ENV/
 *.swo
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
 
 # Generated content
 /outputs/

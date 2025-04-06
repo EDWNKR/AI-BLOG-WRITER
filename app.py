@@ -89,6 +89,12 @@ st.markdown("Generate SEO-optimized blog posts with AI. Create beautiful, struct
 
 # Function to validate OpenAI API key
 def validate_openai_key() -> bool:
+    # Try to get API key from Streamlit secrets first
+    if 'api_keys' in st.secrets and 'openai' in st.secrets['api_keys']:
+        api_key = st.secrets['api_keys']['openai']
+        return api_key != "YOUR_OPENAI_API_KEY" and api_key.startswith("sk-")
+    
+    # Fall back to environment variable (for local development)
     api_key = os.getenv("OPENAI_API_KEY")
     return api_key is not None and api_key.startswith("sk-")
 
@@ -98,7 +104,7 @@ with st.sidebar:
     
     # Check if API key is set
     if not validate_openai_key():
-        st.error("⚠️ OpenAI API key not found. Please set it in your .env file.")
+        st.error("⚠️ OpenAI API key not found. Please add it to your Streamlit secrets or .env file.")
     
     # Blog post settings
     st.subheader("Blog Settings")
