@@ -276,8 +276,9 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
     """
     from wordpress_xmlrpc import Client, WordPressPost
     from wordpress_xmlrpc.methods.posts import NewPost
+    from wordpress_xmlrpc.methods import media  # ✅ ADD THIS IMPORT
     from wordpress_xmlrpc.compat import xmlrpc_client
-    
+
     try:
         wp_url, wp_username, wp_password = get_wordpress_credentials()
         
@@ -306,7 +307,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
                 'overwrite': True
             }
             
-            response = wp.call(media.UploadFile(data))
+            response = wp.call(media.UploadFile(data))  # ✅ media now defined
             attachment_id = response['id']
             
             # Set as featured image
@@ -316,4 +317,5 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
         
         return f"{wp_url}/?p={post_id}"
     except Exception as e:
-        raise APIError(f"Error saving to WordPress: {str(e)}") 
+        raise APIError(f"Error saving to WordPress: {str(e)}")
+
