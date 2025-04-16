@@ -83,7 +83,7 @@ Format the output as Markdown.
 """
 
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an expert blog writer skilled in SEO and creating engaging, well-structured content."},
                 {"role": "user", "content": prompt}
