@@ -115,7 +115,7 @@ def generate_image(prompt: str) -> Optional[Image.Image]:
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt,
-            size="1792x1024",
+            size="256x256",
             quality="standard",
             n=1,
         )
@@ -278,7 +278,6 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
     from wordpress_xmlrpc.methods.posts import NewPost
     from wordpress_xmlrpc.methods import media
     from wordpress_xmlrpc.compat import xmlrpc_client
-    from wordpress_xmlrpc.transport import RequestsTransport
 
     try:
         wp_url, wp_username, wp_password = get_wordpress_credentials()
@@ -286,9 +285,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
         if not wp_url or not wp_username or not wp_password:
             raise APIError("WordPress credentials not found in Streamlit secrets or environment variables")
         
-        # Set a custom timeout for the transport layer
-        transport = RequestsTransport(timeout=180)  # Increase timeout to 60 seconds
-        wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password, transport=transport)
+        wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password, timeout=300)  # Set timeout to 5 minutes (300 seconds)
         
         post = WordPressPost()
         post.title = title
@@ -300,7 +297,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
             # Optimize image size before uploading
             img_byte_arr = BytesIO()
             optimized_image = image.copy()
-            optimized_image.thumbnail((1024, 1024))  # Resize to a maximum of 1024x1024
+            optimized_image.thumbnail((256, 256))  # Resize to a maximum of 1024x1024
             optimized_image.save(img_byte_arr, format='PNG', optimize=True)
             img_byte_arr = img_byte_arr.getvalue()
             
