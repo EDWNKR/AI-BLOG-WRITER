@@ -299,7 +299,8 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
             # Compress and convert image to JPEG for smaller size
             img_byte_arr = BytesIO()
             compressed_image = image.convert('RGB')  # Convert to RGB for JPEG
-            compressed_image.thumbnail((800, 800))  # Smaller resolution
+            # compressed_image.thumbnail((800, 800))  # Smaller resolution
+            compressed_image.thumbnail((1200, 675))
             compressed_image.save(img_byte_arr, format='JPEG', quality=70)  # Reduce quality
             img_data = img_byte_arr.getvalue()
 
