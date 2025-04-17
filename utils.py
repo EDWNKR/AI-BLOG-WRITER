@@ -115,7 +115,7 @@ def generate_image(prompt: str) -> Optional[Image.Image]:
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt,
-            size="256x256",
+            size="1024x1024",
             quality="standard",
             n=1,
         )
@@ -285,7 +285,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
         if not wp_url or not wp_username or not wp_password:
             raise APIError("WordPress credentials not found in Streamlit secrets or environment variables")
         
-        wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password, timeout=300)  # Set timeout to 5 minutes (300 seconds)
+        wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password)
         
         post = WordPressPost()
         post.title = title
@@ -297,7 +297,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
             # Optimize image size before uploading
             img_byte_arr = BytesIO()
             optimized_image = image.copy()
-            optimized_image.thumbnail((256, 256))  # Resize to a maximum of 1024x1024
+            optimized_image.thumbnail((1024, 1024))  # Resize to a maximum of 1024x1024
             optimized_image.save(img_byte_arr, format='PNG', optimize=True)
             img_byte_arr = img_byte_arr.getvalue()
             
