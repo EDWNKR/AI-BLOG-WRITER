@@ -265,15 +265,17 @@ def save_to_notion(title: str, content: str, image=None) -> Optional[str]:
 def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
     """
     Save blog post to WordPress
-    
+
     Args:
         title: Blog post title
         content: Blog post content (HTML format)
         image: Featured image (PIL.Image)
-        
+
     Returns:
         str: URL of the created post or None if failed
     """
+
+    from io import BytesIO
     from wordpress_xmlrpc import Client, WordPressPost
     from wordpress_xmlrpc.methods.posts import NewPost
     from wordpress_xmlrpc.methods import media
@@ -281,47 +283,112 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
 
     try:
         wp_url, wp_username, wp_password = get_wordpress_credentials()
-        
+
         if not wp_url or not wp_username or not wp_password:
-            raise APIError("WordPress credentials not found in Streamlit secrets or environment variables")
-        
+            raise APIError("WordPress credentials not found in secrets or environment")
+
         wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password)
-        
+
         post = WordPressPost()
         post.title = title
         post.content = content
         post.post_status = 'draft'
-        
+
         # Handle featured image if provided
         if image:
-            # Optimize image size before uploading
+            # Compress and convert image to JPEG for smaller size
             img_byte_arr = BytesIO()
-            optimized_image = image.copy()
-            optimized_image.thumbnail((1024, 1024))  # Resize to a maximum of 1024x1024
-            optimized_image.save(img_byte_arr, format='PNG', optimize=True)
-            img_byte_arr = img_byte_arr.getvalue()
-            
-            # Upload to WordPress
+            compressed_image = image.convert('RGB')  # Convert to RGB for JPEG
+            compressed_image.thumbnail((800, 800))  # Smaller resolution
+            compressed_image.save(img_byte_arr, format='JPEG', quality=70)  # Reduce quality
+            img_data = img_byte_arr.getvalue()
+
             data = {
-                'name': f'{title}_featured_image.png',
-                'type': 'image/png',
-                'bits': xmlrpc_client.Binary(img_byte_arr),
+                'name': f'{title}_featured_image.jpg',
+                'type': 'image/jpeg',
+                'bits': xmlrpc_client.Binary(img_data),
             }
-            
-            # Retry upload in case of intermittent failures
-            for attempt in range(3):  # Retry up to 3 times
+
+            # Retry upload in case of error
+            for attempt in range(3):
                 try:
                     response = wp.call(media.UploadFile(data))
                     attachment_id = response['id']
-                    post.thumbnail = attachment_id  # Set as featured image
+                    post.thumbnail = attachment_id
                     break
                 except Exception as upload_error:
-                    if attempt == 2:  # If the last attempt fails, raise the error
-                        raise APIError(f"Error uploading image to WordPress: {str(upload_error)}")
-        
-        # Publish the post
+                    if attempt == 2:
+                        raise APIError(f"Error uploading image: {str(upload_error)}")
+
+        # Publish post
         post_id = wp.call(NewPost(post))
-        
         return f"{wp_url}/?p={post_id}"
+
     except Exception as e:
         raise APIError(f"Error saving to WordPress: {str(e)}")
+
+
+
+# def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
+#     """
+#     Save blog post to WordPress
+    
+#     Args:
+#         title: Blog post title
+#         content: Blog post content (HTML format)
+#         image: Featured image (PIL.Image)
+        
+#     Returns:
+#         str: URL of the created post or None if failed
+#     """
+#     from wordpress_xmlrpc import Client, WordPressPost
+#     from wordpress_xmlrpc.methods.posts import NewPost
+#     from wordpress_xmlrpc.methods import media
+#     from wordpress_xmlrpc.compat import xmlrpc_client
+
+#     try:
+#         wp_url, wp_username, wp_password = get_wordpress_credentials()
+        
+#         if not wp_url or not wp_username or not wp_password:
+#             raise APIError("WordPress credentials not found in Streamlit secrets or environment variables")
+        
+#         wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password)
+        
+#         post = WordPressPost()
+#         post.title = title
+#         post.content = content
+#         post.post_status = 'draft'
+        
+#         # Handle featured image if provided
+#         if image:
+#             # Optimize image size before uploading
+#             img_byte_arr = BytesIO()
+#             optimized_image = image.copy()
+#             optimized_image.thumbnail((1024, 1024))  # Resize to a maximum of 1024x1024
+#             optimized_image.save(img_byte_arr, format='PNG', optimize=True)
+#             img_byte_arr = img_byte_arr.getvalue()
+            
+#             # Upload to WordPress
+#             data = {
+#                 'name': f'{title}_featured_image.png',
+#                 'type': 'image/png',
+#                 'bits': xmlrpc_client.Binary(img_byte_arr),
+#             }
+            
+#             # Retry upload in case of intermittent failures
+#             for attempt in range(3):  # Retry up to 3 times
+#                 try:
+#                     response = wp.call(media.UploadFile(data))
+#                     attachment_id = response['id']
+#                     post.thumbnail = attachment_id  # Set as featured image
+#                     break
+#                 except Exception as upload_error:
+#                     if attempt == 2:  # If the last attempt fails, raise the error
+#                         raise APIError(f"Error uploading image to WordPress: {str(upload_error)}")
+        
+#         # Publish the post
+#         post_id = wp.call(NewPost(post))
+        
+#         return f"{wp_url}/?p={post_id}"
+#     except Exception as e:
+#         raise APIError(f"Error saving to WordPress: {str(e)}")
