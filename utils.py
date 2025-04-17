@@ -278,6 +278,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
     from wordpress_xmlrpc.methods.posts import NewPost
     from wordpress_xmlrpc.methods import media
     from wordpress_xmlrpc.compat import xmlrpc_client
+    from wordpress_xmlrpc.transport import RequestsTransport
 
     try:
         wp_url, wp_username, wp_password = get_wordpress_credentials()
@@ -285,7 +286,9 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
         if not wp_url or not wp_username or not wp_password:
             raise APIError("WordPress credentials not found in Streamlit secrets or environment variables")
         
-        wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password)
+        # Set a custom timeout for the transport layer
+        transport = RequestsTransport(timeout=180)  # Increase timeout to 60 seconds
+        wp = Client(f'{wp_url}/xmlrpc.php', wp_username, wp_password, transport=transport)
         
         post = WordPressPost()
         post.title = title
@@ -294,9 +297,11 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
         
         # Handle featured image if provided
         if image:
-            # Save image to temp file
+            # Optimize image size before uploading
             img_byte_arr = BytesIO()
-            image.save(img_byte_arr, format='PNG')
+            optimized_image = image.copy()
+            optimized_image.thumbnail((1024, 1024))  # Resize to a maximum of 1024x1024
+            optimized_image.save(img_byte_arr, format='PNG', optimize=True)
             img_byte_arr = img_byte_arr.getvalue()
             
             # Upload to WordPress
@@ -306,12 +311,18 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
                 'bits': xmlrpc_client.Binary(img_byte_arr),
             }
             
-            response = wp.call(media.UploadFile(data))
-            attachment_id = response['id']
-            
-            # Set as featured image
-            post.thumbnail = attachment_id
+            # Retry upload in case of intermittent failures
+            for attempt in range(3):  # Retry up to 3 times
+                try:
+                    response = wp.call(media.UploadFile(data))
+                    attachment_id = response['id']
+                    post.thumbnail = attachment_id  # Set as featured image
+                    break
+                except Exception as upload_error:
+                    if attempt == 2:  # If the last attempt fails, raise the error
+                        raise APIError(f"Error uploading image to WordPress: {str(upload_error)}")
         
+        # Publish the post
         post_id = wp.call(NewPost(post))
         
         return f"{wp_url}/?p={post_id}"
