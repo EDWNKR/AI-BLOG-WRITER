@@ -115,7 +115,7 @@ def generate_image(prompt: str) -> Optional[Image.Image]:
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt,
-            size="1024x1024",
+            size="1024x768",
             quality="standard",
             n=1,
         )
@@ -276,7 +276,7 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
     """
     from wordpress_xmlrpc import Client, WordPressPost
     from wordpress_xmlrpc.methods.posts import NewPost
-    from wordpress_xmlrpc.methods import media  # ✅ ADD THIS IMPORT
+    from wordpress_xmlrpc.methods import media
     from wordpress_xmlrpc.compat import xmlrpc_client
 
     try:
@@ -304,10 +304,9 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
                 'name': f'{title}_featured_image.png',
                 'type': 'image/png',
                 'bits': xmlrpc_client.Binary(img_byte_arr),
-                'overwrite': True
             }
             
-            response = wp.call(media.UploadFile(data))  # ✅ media now defined
+            response = wp.call(media.UploadFile(data))
             attachment_id = response['id']
             
             # Set as featured image
@@ -318,4 +317,3 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
         return f"{wp_url}/?p={post_id}"
     except Exception as e:
         raise APIError(f"Error saving to WordPress: {str(e)}")
-
