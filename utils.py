@@ -115,7 +115,7 @@ def generate_image(prompt: str) -> Optional[Image.Image]:
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt,
-            size="1024x1024",
+            size="1792x1024",
             quality="standard",
             n=1,
         )
@@ -300,7 +300,8 @@ def save_to_wordpress(title: str, content: str, image=None) -> Optional[str]:
             img_byte_arr = BytesIO()
             compressed_image = image.convert('RGB')  # Convert to RGB for JPEG
             # compressed_image.thumbnail((800, 800))  # Smaller resolution
-            compressed_image.thumbnail((1200, 675))
+            # 1792x1024
+            compressed_image.thumbnail((1792, 1024))
             compressed_image.save(img_byte_arr, format='JPEG', quality=70)  # Reduce quality
             img_data = img_byte_arr.getvalue()
 
